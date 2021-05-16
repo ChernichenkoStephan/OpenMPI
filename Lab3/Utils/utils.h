@@ -2,6 +2,8 @@
 
 float sum(float* array, int size);
 
+int* get_rand_source_array(int count);
+
 /**
 * examples:
 * size = 4 -> 1000

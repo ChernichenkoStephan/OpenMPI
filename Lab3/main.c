@@ -60,8 +60,9 @@ int main(int argc, char** argv) {
     sub_array = malloc(sizeof(float) * elements_per_proc);
 
     // Scatter the numbers to all processes
-    int sctr_status = MPI_Scatter(source_array, elements_per_proc, MPI_FLOAT, sub_array,
-                elements_per_proc, MPI_FLOAT, root, MPI_COMM_WORLD);
+    int sctr_status = MPI_Scatter(source_array, elements_per_proc, MPI_FLOAT,
+                                  sub_array, elements_per_proc, MPI_FLOAT,
+                                  root, MPI_COMM_WORLD);
 
     // Compute the sum of own subset all processes
     float sub_sum = sum(sub_array, proc_num);

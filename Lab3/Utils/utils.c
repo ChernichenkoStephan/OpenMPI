@@ -37,3 +37,12 @@ float* get_source_array(int count) {
 
   return res;
 }
+
+int* get_rand_source_array(int count) {
+  int* res = (int*) malloc(sizeof(int) * count);
+
+  for (size_t i = 0; i < count; i++)
+    res[i] = 1 + rand() % 9;
+
+  return res;
+}
