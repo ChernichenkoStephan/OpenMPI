@@ -1,0 +1,44 @@
+Karatsuba_mul(X, Y):
+  если n < 4: вернуть X × Y
+  X_l = левые n/2 цифр X
+  X_r = правые n/2 цифр X
+  Y_l = левые n/2 цифр Y
+  Y_r = правые n/2 цифр Y
+  Prod1 = Karatsuba_mul(X_l, Y_l)
+  Prod2 = Karatsuba_mul(X_r, Y_r)
+  Prod3 = Karatsuba_mul(X_l + X_r, Y_l + Y_r)
+  Prod1 × 10 ^ n + (Prod3 − Prod1 − Prod2) × 10 ^ (n / 2) + Prod2
+
+22 222 × 22 222
+X_l = 222
+X_r = 22
+Y_l = 222
+Y_r = 22
+
+X_sum = X_l + X_r = 244
+Y_sum = Y_l + Y_r = 244
+
+temp1 = X_l × Y_l = 49 284
+temp2 = X_r × Y_r = 484
+temp3 = X_sum × Y_sum = 59 536
+
+pre_final0 = temp1 × 10^4
+pre_final1 = (temp3 − temp1 − temp2) × 10 ^ (2)
+pre_final2 = temp2
+
+final = pre_final0 + pre_final1 + pre_final2
+
+
+
+
+
+How to use:
+
+Right click on an executable in the treeview,
+select Debug this file, and click Save
+
+Toggle breakpoints by clicking beside line numbers or pressing F9
+
+Press F5, and select the executable
+...
+Profit!

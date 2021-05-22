@@ -26,21 +26,45 @@
 * Реализуйте тип «длинное целое».
 * Напишите программу, которая осуществляет умножение A целых чисел заданной длины
 * методом Карацубы.
+* (123)^8 = 52 389 094 428 262 881
 */
 
-MPI_Datatype make_long_word_type(int word_length) {
+MPI_Datatype make_dto_type() {
   MPI_Datatype res;
   int fields_amount         = 2;
-  MPI_Datatype old_types[2] = {MPI_INT, MPI_INT};
-  int          blocklens[2] = {word_length, 1};
+  MPI_Datatype old_types[2] = {MPI_INT, MPI_LONG};
+  int          blocklens[2] = {MAX_WORD_LENGTH, 1};
   MPI_Aint displacements[2] = {
-    offsetof(Long_Word, nums),
-    offsetof(Long_Word, length)
+    offsetof(Long_Word_DTO, numbers),
+    offsetof(Long_Word_DTO, word_length)
   };
 
   MPI_Type_create_struct(fields_amount, blocklens, displacements, old_types, &res);
   MPI_Type_commit(&res);
   return res;
+}
+
+// Long_Word* get_words_array(int amount) {
+//   Long_Word* res = (Long_Word*) malloc(amount * sizeof(Long_Word));
+//
+//   for (size_t i = 0; i < amount; i++) {
+//     res[i].word_length = 3;
+//     for (size_t j = 0; j < 3; j++)
+//       res[i].numbers[j] = j;
+//   }
+//   return res;
+// }
+
+void fill_words_array_test(Long_Word_DTO* array, int amount) {
+  for (size_t i = 0; i < amount; i++) {
+    array[i].word_length = 3;
+    for (size_t j = 0; j < 3; j++)
+      array[i].numbers[j] = 3 - j;
+  }
+}
+
+void print_array(Long_Word* array, int length) {
+  for (size_t i = 0; i < length; i++) Long_Word_print(array + i);
 }
 
 
@@ -49,11 +73,12 @@ int main(int argc, char *argv[]) {
   MPI_Status status;
   MPI_Datatype long_word_type;
   int proc_rank = 0, proc_num = 1, op_status = 0;
-  int amount = 4;
-  int word_length = 5;
 
-  Long_Word* source_array;
-  int elements_per_proc = 1;
+  int elements_per_proc = 2;
+  int amount = 8;
+  Long_Word_DTO source_array[amount];
+
+  fill_words_array_test(source_array, amount);
 
   /* ------------ Begin of communism area ------------ */
   MPI_Init(&argc, &argv);
@@ -63,37 +88,31 @@ int main(int argc, char *argv[]) {
 
   int root = 0;
   int is_root = proc_rank == root;
-
-  long_word_type = make_long_word_type(word_length);
-
-  if (is_root) {
-    printf("nums %lu | %lu\n", sizeof(Long_Word), offsetof(Long_Word, nums));
-    printf("length %lu | %lu\n", sizeof(int), offsetof(Long_Word, length));
-  }
+  long_word_type = make_dto_type();
 
   if (is_root) {
-      source_array = (Long_Word*) malloc(amount * sizeof(Long_Word));
-      for (size_t i = 0; i < amount; i++) {
-        source_array[i].nums = (int*) malloc(word_length * sizeof(int));
-        for (size_t j = 0; j < word_length; j++)
-          source_array[i].nums[j] = 7;
-      }
 
-      MPI_Send(source_array, amount, long_word_type, 1, 0, MPI_COMM_WORLD);
+    printf("Root sends\n");
+    for (size_t i = 0; i < amount; i++) {
+      Long_Word_DTO_print(source_array + i);
+      printf("\n");
+    }
+
+    MPI_Send(source_array, amount, long_word_type, 1, 0, MPI_COMM_WORLD);
+
   }
   else if (proc_rank == 1) {
-    source_array = (Long_Word*) malloc(amount * sizeof(Long_Word));
-    for (size_t i = 0; i < amount; i++) source_array[i].nums = (int*) malloc(word_length * sizeof(int));
+
+    printf("1 gets\n");
     MPI_Recv(source_array, amount, long_word_type, root, 0, MPI_COMM_WORLD, &status);
-    
-    for (size_t i = 0; i < amount; i++)
-      printf("%d\n", source_array[i].nums[0]);
+    for (size_t i = 0; i < amount; i++) {
+      Long_Word_DTO_print(source_array + i);
+      printf("\n");
+    }
 
   }
 
-  /* Clear part */
   MPI_Type_free(&long_word_type);
-
   /* End of communism area */
   MPI_Finalize();
   return 0;
