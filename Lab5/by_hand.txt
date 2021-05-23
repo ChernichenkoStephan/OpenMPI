@@ -29,16 +29,7 @@ pre_final2 = temp2
 final = pre_final0 + pre_final1 + pre_final2
 
 
+123^8 = 52 389 094 428 262 881
+123^4 = 228 886 641
 
-
-
-How to use:
-
-Right click on an executable in the treeview,
-select Debug this file, and click Save
-
-Toggle breakpoints by clicking beside line numbers or pressing F9
-
-Press F5, and select the executable
-...
-Profit!
+15 129 × 15 129 = 228 886 641

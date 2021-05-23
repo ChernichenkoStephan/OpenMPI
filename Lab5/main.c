@@ -9,6 +9,7 @@
 #endif
 
 #include "Long_Word/long_word.h"
+#include "Utils/utils.h"
 
 /**
 * Starting script for manual call in unix systems
@@ -42,51 +43,12 @@ int MPI_Group_size ( MPI_Group group, int *size );
 int MPI_Group_rank ( MPI_Group group, int *rank );
 */
 
-MPI_Datatype make_dto_type() {
-  MPI_Datatype res;
-  int fields_amount         = 2;
-  MPI_Datatype old_types[2] = {MPI_INT, MPI_LONG};
-  int          blocklens[2] = {MAX_WORD_LENGTH, 1};
-  MPI_Aint displacements[2] = {
-    offsetof(Long_Word_DTO, numbers),
-    offsetof(Long_Word_DTO, word_length)
-  };
-
-  MPI_Type_create_struct(fields_amount, blocklens, displacements, old_types, &res);
-  MPI_Type_commit(&res);
-  return res;
-}
-
-void fill_words_array_test(Long_Word_DTO* array, int amount) {
-  for (size_t i = 0; i < amount; i++) {
-    array[i].word_length = 3;
-    for (size_t j = 0; j < 3; j++)
-      array[i].numbers[j] = 3 - j;
-  }
-}
-
-void print_array(Long_Word* array, int length) {
-  for (size_t i = 0; i < length; i++) Long_Word_print(array + i);
-}
-
-int send(Long_Word* word, int receiver, MPI_Comm* comm) {
-  Long_Word_DTO message = Long_Word_to_DTO(word);
-  return MPI_Send(&message, 1, make_dto_type(),
-                0, 0, *comm);
-}
-
-int receive(Long_Word_DTO* message, int sender, MPI_Comm* comm) {
-  MPI_Status status;
-  return MPI_Recv(message, 1, make_dto_type(),
-                1, MPI_ANY_TAG, *comm, &status);
-}
-
-
 
 int main(int argc, char *argv[]) {
   MPI_Status status;
   /* Init phase */
   MPI_Datatype long_word_type;
+  MPI_Comm comm0 = MPI_COMM_WORLD;
   int proc_rank = 0, proc_num = 1, op_status = 0;
 
   int elements_per_proc = 2;
@@ -97,8 +59,8 @@ int main(int argc, char *argv[]) {
   /* ------------ Begin of communism area ------------ */
   MPI_Init(&argc, &argv);
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &proc_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &proc_num);
+  MPI_Comm_rank(comm0, &proc_rank);
+  MPI_Comm_size(comm0, &proc_num);
 
   int root = 0;
   char is_root = proc_rank == root;
@@ -106,27 +68,25 @@ int main(int argc, char *argv[]) {
   /* ------- Data preparation & send part ------- */
   if (is_root) {
     fill_words_array_test(source_array, amount);
-    // printf("Root sends:\n");
-    // for (size_t i = 0; i < amount; i++) {
-    //   Long_Word_DTO_print(source_array + i);
-    //   printf("\n");
-    // }
+    printf("Root sends:\n");
+    for (size_t i = 0; i < amount; i++) {
+      Long_Word_DTO_print(source_array + i);
+    }
   }
 
   /* Make type & scatter the numbers to all processes */
   long_word_type = make_dto_type();
   int sctr_status = MPI_Scatter(source_array, elements_per_proc, long_word_type,
                                 receive_array, elements_per_proc, long_word_type,
-                                root, MPI_COMM_WORLD);
+                                root, comm0);
 
 
-  // if (!is_root) {
-  //   printf("Proc-%d receives:\n", proc_rank);
-  //   for (size_t i = 0; i < elements_per_proc; i++) {
-  //     Long_Word_DTO_print(source_array + i);
-  //     printf("\n");
-  //   }
-  // }
+  if (!is_root) {
+    printf("Proc-%d receives:\n", proc_rank);
+    for (size_t i = 0; i < elements_per_proc; i++) {
+      Long_Word_DTO_print(receive_array + i);
+    }
+  }
 
   MPI_Group MPI_GROUP_WORLD;
   MPI_Group group1, group2;
@@ -137,12 +97,12 @@ int main(int argc, char *argv[]) {
   int group1_process_ranks[2] = {0, 1};
   int group2_process_ranks[2] = {2, 3};
 
-  MPI_Comm_group(MPI_COMM_WORLD, &MPI_GROUP_WORLD);
+  MPI_Comm_group(comm0, &MPI_GROUP_WORLD);
 
   MPI_Group_incl(MPI_GROUP_WORLD, 2, group1_process_ranks, &group1);
   MPI_Group_incl(MPI_GROUP_WORLD, 2, group2_process_ranks, &group2);
-  MPI_Comm_create(MPI_COMM_WORLD, group1, &comm1);
-  MPI_Comm_create(MPI_COMM_WORLD, group2, &comm2);
+  MPI_Comm_create(comm0, group1, &comm1);
+  MPI_Comm_create(comm0, group2, &comm2);
 
   /* ------- Calculation part ------- */
   Long_Word* num_array = (Long_Word*) malloc(elements_per_proc * sizeof(Long_Word));
@@ -164,16 +124,8 @@ int main(int argc, char *argv[]) {
     MPI_Group_rank(group1, &rank);
     is_group_root = rank == root;
 
-    if (is_root) {
-      receive(&message, 1, &comm1);
-      // rcv_status = MPI_Recv(&message, 1, long_word_type,
-      //              1, MPI_ANY_TAG, comm1, &status);
-    } else {
-      send(&res, 0, &comm1);
-      // message = Long_Word_to_DTO(&res);
-      // snd_status = MPI_Send(&message, 1, long_word_type,
-      //              0, 0, comm1);
-    }
+    if (is_root) receive(&message, 1, &long_word_type, &comm1);
+    else send(&res, 0, &long_word_type, &comm1);
 
     MPI_Group_free(&group1);
     MPI_Comm_free(&comm1);
@@ -182,14 +134,8 @@ int main(int argc, char *argv[]) {
     MPI_Group_rank(group2, &rank);
     is_group_root = rank == root;
 
-    if (is_group_root) {
-      rcv_status = MPI_Recv(&message, 1, long_word_type,
-                   1, MPI_ANY_TAG, comm2, &status);
-    } else {
-      message = Long_Word_to_DTO(&res);
-      snd_status = MPI_Send(&message, 1, long_word_type,
-                   0, 0, comm2);
-    }
+    if (is_group_root) receive(&message, 1, &long_word_type, &comm2);
+    else send(&res, 0, &long_word_type, &comm2);
 
     MPI_Group_free(&group2);
     MPI_Comm_free(&comm2);
@@ -198,20 +144,14 @@ int main(int argc, char *argv[]) {
   /* ------- Final calculations & send part ------- */
   if (is_root) {
     Long_Word temp = Long_Word_mult_karatsuba(res, Long_Word_from_DTO(&message));
-
-    rcv_status = MPI_Recv(&message, 1, long_word_type,
-                 2, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
+    receive(&message, 2, &long_word_type, &comm0);
     Long_Word final = Long_Word_mult_karatsuba(temp, Long_Word_from_DTO(&message));
 
-    printf("Final res ((123)^8 = 52 389 094 428 262 881):\n");
+    printf("Final res ((123)^8 = 52 389 094 428 262 881) :\n");
     Long_Word_print(&final);
-
   } else if (is_group_root) {
     Long_Word temp = Long_Word_mult_karatsuba(res, Long_Word_from_DTO(&message));
-    message = Long_Word_to_DTO(&temp);
-    snd_status = MPI_Send(&message, 1, long_word_type,
-                 0, 0, MPI_COMM_WORLD);
+    send(&temp, root, &long_word_type, &comm0);
   }
 
   free(num_array);
