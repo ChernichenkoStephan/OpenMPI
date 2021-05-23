@@ -5,7 +5,6 @@
 /**
 * clear && gcc -o test tests.c && ./test
 * clear && gcc -o test tests.c Long_Word/long_word.c && ./test
-https://docs.microsoft.com/en-us/message-passing-interface/mpi-datatype-enumeration
 */
 
 #include "Long_Word/long_word.h"
@@ -47,8 +46,8 @@ int main(int argc, char const *argv[]) {
   Long_Word_DTO_print(&baz);
 
   printf("\nLong_Word_from_DTO:\n");
-  Long_Word* bar = Long_Word_from_DTO(&baz);
-  Long_Word_print(bar);
+  Long_Word bar = Long_Word_from_DTO(&baz);
+  Long_Word_print(&bar);
 
   return 0;
 }

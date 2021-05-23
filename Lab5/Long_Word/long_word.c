@@ -26,12 +26,12 @@ Long_Word_DTO Long_Word_to_DTO(Long_Word* word) {
   return res;
 }
 
-Long_Word* Long_Word_from_DTO(Long_Word_DTO* dto) {
-  Long_Word* res = (Long_Word*) malloc(sizeof(Long_Word));
-  res->numbers = (int*) malloc(dto->word_length * sizeof(int));
-  res->word_length = dto->word_length;
+Long_Word Long_Word_from_DTO(Long_Word_DTO* dto) {
+  Long_Word res;
+  res.numbers = (int*) malloc(dto->word_length * sizeof(int));
+  res.word_length = dto->word_length;
   for (size_t i = 0; i < dto->word_length; i++)
-    res->numbers[i] = dto->numbers[i];
+    res.numbers[i] = dto->numbers[i];
   return res;
 }
 
@@ -117,7 +117,11 @@ void Long_Word_print(Long_Word* word) {
     i--;
     size = i;
   } while (word->numbers[i] == 0);
-  for (i = size; i >= 0; i--) printf("%d", word->numbers[i]);
+  for (i = size; i >= 0; i--) {
+    printf("%d", word->numbers[i]);
+    if ((i % 3) == 0) printf(" ");
+  }
+  printf("\n");
 }
 
 void Long_Word_DTO_print(Long_Word_DTO* dto) {
@@ -126,5 +130,9 @@ void Long_Word_DTO_print(Long_Word_DTO* dto) {
     i--;
     size = i;
   } while (dto->numbers[i] == 0);
-  for (i = size; i >= 0; i--) printf("%d", dto->numbers[i]);
+  for (i = size; i >= 0; i--) {
+    printf("%d", dto->numbers[i]);
+    if ((i % 3) == 0) printf(" ");
+  }
+  printf("\n");
 }
